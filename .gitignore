@@ -16,3 +16,10 @@ coverage/
 .idea/
 __pycache__/
 *.pyc
+.env
+.env.*
+.env.local
+.next/
+node_modules/
+dist/
+out/
