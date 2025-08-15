@@ -26,7 +26,7 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end("Method Not Allowed");
   try {
     const {
-      model = "llama-3.1-sonar-large-128k-online",
+      model = "llama-3.1-70b-instruct", // 최신 모델로 기본값 변경
       tags = [],
       subject = "",
       tone = "객관적",

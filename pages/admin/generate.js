@@ -432,7 +432,6 @@ export default function GenerateArticle() {
                 <option value="openai">OpenAI</option>
                 <option value="gemini">Gemini</option>
                 <option value="claude">Claude</option>
-                <option value="perplexity">Perplexity</option>
               </select>
 
               <label>모델</label>

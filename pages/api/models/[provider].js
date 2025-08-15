@@ -50,16 +50,6 @@ export default async function handler(req, res) {
       return res.status(200).json({ models });
     }
 
-    if (provider === "perplexity") {
-      const env = process.env.PERPLEXITY_MODELS;
-      const models = env ? env.split(",").map(s => s.trim()).filter(Boolean) : [
-        "llama-3.1-sonar-large-128k-online",
-        "llama-3.1-sonar-medium-128k-online",
-        "llama-3.1-sonar-small-128k-online",
-      ];
-      return res.status(200).json({ models });
-    }
-
     return res.status(400).json({ error: "unknown provider" });
   } catch (e) {
     console.error(e);
