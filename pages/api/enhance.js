@@ -123,10 +123,15 @@ async function seoFromOpenAI({ content, tags, subject, tone, lengthRange, filter
 async function seoFromGemini({ content, tags, subject, tone, lengthRange, filters, guidelines }) {
   if (!process.env.GOOGLE_API_KEY) return null;
   const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+  // 시스템 프롬프트와 사용자 프롬프트를 분리하여 모델 초기화
+  const model = genAI.getGenerativeModel({
+    model: "gemini-1.5-pro",
+    systemInstruction: titlePrompt,
+  });
   const constraint = buildConstraintText(filters, guidelines);
-  const prompt = `${titlePrompt}\n\n태그: ${(tags||[]).join(", ") || "(없음)"}\n주제 설명: ${subject || "(없음)"}\n말투: ${tone}\n길이: ${lengthRange.min}~${lengthRange.max} 단어\n추가 제약:\n${constraint}\n\n[기사원문]\n${content}\n\nJSON만 출력`;
-  const r = await model.generateContent(prompt);
+  // 사용자 프롬프트는 기사 내용과 제약사항에만 집중
+  const userPrompt = `태그: ${(tags||[]).join(", ") || "(없음)"}\n주제 설명: ${subject || "(없음)"}\n말투: ${tone}\n길이: ${lengthRange.min}~${lengthRange.max} 단어\n추가 제약:\n${constraint}\n\n[기사원문]\n${content}\n\nJSON만 출력`;
+  const r = await model.generateContent(userPrompt);
   const txt = r.response?.text?.();
   return safeParseJson(txt);
 }
@@ -134,8 +139,16 @@ async function seoFromClaude({ content, tags, subject, tone, lengthRange, filter
   if (!process.env.ANTHROPIC_API_KEY) return null;
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const constraint = buildConstraintText(filters, guidelines);
-  const prompt = `${titlePrompt}\n\n태그: ${(tags||[]).join(", ") || "(없음)"}\n주제 설명: ${subject || "(없음)"}\n말투: ${tone}\n길이: ${lengthRange.min}~${lengthRange.max} 단어\n추가 제약:\n${constraint}\n\n[기사원문]\n${content}\n\nJSON만 출력`;
-  const msg = await anthropic.messages.create({ model: "claude-3-5-sonnet-latest", max_tokens: 800, messages: [{ role: "user", content: prompt }] });
+  // 사용자 프롬프트는 기사 내용과 제약사항에만 집중
+  const userPrompt = `태그: ${(tags||[]).join(", ") || "(없음)"}\n주제 설명: ${subject || "(없음)"}\n말투: ${tone}\n길이: ${lengthRange.min}~${lengthRange.max} 단어\n추가 제약:\n${constraint}\n\n[기사원문]\n${content}\n\n반드시 JSON 형식으로만 응답하세요. 다른 텍스트는 포함하지 마세요.`;
+  
+  // create 호출 시 `system` 파라미터로 시스템 프롬프트 전달
+  const msg = await anthropic.messages.create({
+    model: "claude-3-5-sonnet-20240620",
+    max_tokens: 1024,
+    system: titlePrompt, // 시스템 프롬프트 분리
+    messages: [{ role: "user", content: userPrompt }]
+  });
   const block = msg.content?.[0];
   const txt = typeof block === "object" && "text" in block ? block.text : "";
   return safeParseJson(txt);
@@ -188,15 +201,38 @@ export default async function handler(req, res){
   if (!content) return res.status(400).json({ error: "content 가 필요합니다." });
 
   try{
-    // 1) 제목 후보 JSON: 선택 제공사 → OpenAI → Claude → Gemini → 휴리스틱
-    const ctx = { content, tags, subject, tone, lengthRange, filters, guidelines };
+    // 현재 코드 개선
     let seoJson = null;
-    if (textProvider === "openai") seoJson = await seoFromOpenAI(ctx);
-    else if (textProvider === "claude") seoJson = await seoFromClaude(ctx);
-    else if (textProvider === "gemini") seoJson = await seoFromGemini(ctx);
-    if (!seoJson) seoJson = await seoFromOpenAI(ctx);
-    if (!seoJson) seoJson = await seoFromClaude(ctx);
-    if (!seoJson) seoJson = await seoFromGemini(ctx);
+    let lastError = null;
+
+    // 선택된 제공사 우선 시도
+    if (textProvider === "openai") {
+      try { seoJson = await seoFromOpenAI({ content, tags, subject, tone, lengthRange, filters, guidelines }); } 
+      catch (e) { lastError = `OpenAI: ${e.message}`; }
+    }
+    else if (textProvider === "claude") {
+      try { seoJson = await seoFromClaude({ content, tags, subject, tone, lengthRange, filters, guidelines }); } 
+      catch (e) { lastError = `Claude: ${e.message}`; }
+    }
+    else if (textProvider === "gemini") {
+      try { seoJson = await seoFromGemini({ content, tags, subject, tone, lengthRange, filters, guidelines }); } 
+      catch (e) { lastError = `Gemini: ${e.message}`; }
+    }
+
+    // 폴백 시도 (에러 로깅 포함)
+    if (!seoJson) {
+      console.log(`Primary provider ${textProvider} failed: ${lastError}`);
+      try { seoJson = await seoFromOpenAI({ content, tags, subject, tone, lengthRange, filters, guidelines }); } 
+      catch (e) { console.log(`OpenAI fallback failed: ${e.message}`); }
+    }
+    if (!seoJson) {
+      try { seoJson = await seoFromClaude({ content, tags, subject, tone, lengthRange, filters, guidelines }); } 
+      catch (e) { console.log(`Claude fallback failed: ${e.message}`); }
+    }
+    if (!seoJson) {
+      try { seoJson = await seoFromGemini({ content, tags, subject, tone, lengthRange, filters, guidelines }); } 
+      catch (e) { console.log(`Gemini fallback failed: ${e.message}`); }
+    }
 
     // 2) 후보 정제: 필터 통과 → 점수화 순
     let rawCandidates = [];
@@ -218,7 +254,46 @@ export default async function handler(req, res){
       const firstLine = (content.replace(/[#>*`\-\*_]/g,"").split("\n").find(Boolean) || "").trim();
       const base = firstH2 || firstLine || "AI 뉴스";
       candidates = [base, `${base} — ${tags[0]||"분석"}`, `${base} 전망과 과제`].slice(0,3);
-      metaDescription = subject ? subject.slice(0,150) : "이 기사는 주제에 대한 심층 분석을 제공합니다.";
+    }
+
+    // 개선된 스마트 제목 생성
+    if (!candidates.length) {
+      candidates = generateSmartTitles(content, tags, subject, tone);
+    }
+
+    function generateSmartTitles(content, tags, subject, tone) {
+      const titles = [];
+      
+      // 1. H2, H3 태그에서 의미있는 제목 추출
+      const headings = content.match(/^#{2,3}\s*(.+)$/gm) || [];
+      if (headings.length > 0) {
+        const cleanHeading = headings[0].replace(/^#{2,3}\s*/, "").trim();
+        if (cleanHeading.length >= 10 && cleanHeading.length <= 70) {
+          titles.push(cleanHeading);
+        }
+      }
+      
+      // 2. 첫 번째 문단에서 핵심 문장 추출
+      const firstParagraph = content.split('\n\n')[0]?.replace(/[#>*`\-\*_]/g, "").trim();
+      if (firstParagraph && firstParagraph.length > 20) {
+        const sentence = firstParagraph.split(/[.!?]/)[0].trim();
+        if (sentence.length >= 15 && sentence.length <= 60) {
+          titles.push(sentence);
+        }
+      }
+      
+      // 3. 태그와 주제를 조합한 제목 생성
+      if (tags.length > 0) {
+        const tagBased = `${tags[0]} ${subject ? subject.split(' ').slice(0, 3).join(' ') : '분석'}`;
+        if (tagBased.length <= 60) titles.push(tagBased);
+      }
+      
+      // 4. 기본 제목
+      if (titles.length === 0) {
+        titles.push("AI 뉴스");
+      }
+      
+      return titles.slice(0, 6); // 최대 6개
     }
 
     // 최종 제목 선택
