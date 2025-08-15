@@ -47,22 +47,33 @@ export default async function handler(req, res) {
       model,
       messages: [{ role: "user", content: prompt }],
     };
-    if (model !== 'gpt5mini') {
+    
+    // GPT-5 모델은 temperature를 설정하지 않음
+    if (!model.startsWith('gpt-5') && !model.startsWith('gpt5')) {
       params.temperature = 0.5;
     }
 
     // 일시 오류/429 대비: 지수 백오프 재시도 래퍼로 감싸기
     const completion = await withRetry(() => 
       client.chat.completions.create(params),
-      { retries: 3, baseDelayMs: 1000 } // 필요 시 조정
+      { retries: 3, baseDelayMs: 1000 }
     );
 
     const content = completion.choices?.[0]?.message?.content || "(응답 없음)";
+    
+    // 토큰 사용량 정보 추가
+    const usage = completion.usage || {};
+    
     return res.status(200).json({
       title: "temp",
       content,
       source: "OpenAI",
-      date: new Date().toISOString()
+      date: new Date().toISOString(),
+      usage: {
+        prompt_tokens: usage.prompt_tokens || 0,
+        completion_tokens: usage.completion_tokens || 0,
+        total_tokens: usage.total_tokens || 0
+      }
     });
   } catch (e) {
     console.error(e);

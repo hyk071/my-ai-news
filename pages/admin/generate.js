@@ -206,6 +206,207 @@ export default function GenerateArticle() {
     } catch (e) { alert(e.message); }
   }
 
+  // 토큰 사용량 표시 함수 추가
+  function formatTokenUsage(usage) {
+    if (!usage) return null;
+    
+    if (usage.note) {
+      return (
+        <div className="token-usage note" style={{ 
+          fontSize: '0.875rem', 
+          color: '#666', 
+          marginTop: '16px',
+          padding: '8px',
+          backgroundColor: '#f5f5f5',
+          borderRadius: '4px'
+        }}>
+          {usage.note}
+        </div>
+      );
+    }
+    
+    return (
+      <div className="token-usage" style={{ 
+        fontSize: '0.875rem', 
+        color: '#666', 
+        marginTop: '16px',
+        padding: '8px',
+        backgroundColor: '#f5f5f5',
+        borderRadius: '4px',
+        display: 'flex',
+        gap: '16px',
+        justifyContent: 'center'
+      }}>
+        <span>프롬프트: {usage.prompt_tokens?.toLocaleString() || 0}</span>
+        <span>생성: {usage.completion_tokens?.toLocaleString() || 0}</span>
+        <span>총합: {usage.total_tokens?.toLocaleString() || 0}</span>
+      </div>
+    );
+  }
+
+  // 제목 추출 함수 완전 재작성
+  function extractTitle(content) {
+    if (!content) return "제목 없음";
+    
+    const lines = content.split('\n');
+    
+    // 1단계: H1 제목 찾기 (# 제목)
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('# ') && !trimmed.startsWith('##')) {
+        const title = trimmed.replace(/^#\s+/, '').trim();
+        if (title && title.length > 5) { // 최소 5글자 이상
+          console.log('H1 제목 발견:', title); // 디버깅용
+          return title;
+        }
+      }
+    }
+    
+    // 2단계: 첫 번째 의미있는 텍스트를 제목으로 사용 (H1이 없는 경우)
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed && 
+          !trimmed.startsWith('#') && 
+          !trimmed.startsWith('(') && 
+          !trimmed.startsWith('-') &&
+          !trimmed.includes('개요') && 
+          !trimmed.includes('리드') && 
+          !trimmed.includes('넛그래프') &&
+          !trimmed.includes('By ') && // 작성자 정보 제외
+          !trimmed.includes('년 ') && // 날짜 정보 제외
+          !trimmed.includes('※') && // 주의사항 제외
+          trimmed.length > 5) { // 최소 5글자 이상
+        console.log('대체 제목 발견:', trimmed); // 디버깅용
+        return trimmed;
+      }
+    }
+    
+    console.log('제목을 찾을 수 없음'); // 디버깅용
+    return "제목 없음";
+  }
+
+  // 제목 후보 추출 함수 완전 재작성
+  function extractTitleCandidates(content) {
+    if (!content) return [];
+    
+    const lines = content.split('\n');
+    const candidates = [];
+    
+    console.log('제목 후보 추출 시작:', lines.length, '줄'); // 디버깅용
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      
+      // H1 제목 찾기 (# 제목)
+      if (line.startsWith('# ') && !line.startsWith('##')) {
+        const title = line.replace(/^#\s+/, '').trim();
+        if (title && title.length > 5 && !candidates.includes(title)) {
+          console.log('H1 제목 후보 추가:', title); // 디버깅용
+          candidates.push(title);
+        }
+        continue;
+      }
+      
+      // H2 소제목은 제목 후보에서 제외
+      if (line.startsWith('## ')) {
+        continue;
+      }
+      
+      // 첫 번째 의미있는 텍스트를 제목 후보로 추가
+      if (line && !line.startsWith('#') && !line.startsWith('(') && !line.startsWith('-') && candidates.length === 0) {
+        if (!line.includes('개요') && 
+            !line.includes('리드') && 
+            !line.includes('넛그래프') &&
+            !line.includes('By ') && 
+            !line.includes('년 ') && 
+            !line.includes('※') && // 주의사항 제외
+            line.length > 5) {
+          console.log('대체 제목 후보 추가:', line); // 디버깅용
+          candidates.push(line);
+        }
+      }
+    }
+    
+    console.log('최종 제목 후보:', candidates); // 디버깅용
+    return candidates.slice(0, 6);
+  }
+
+  // 제목 후보 표시 개선
+  function formatTitleCandidates(candidates) {
+    if (!candidates || candidates.length === 0) return null;
+    
+    return (
+      <div className="title-candidates">
+        <h4>제목 후보 선택 (최대 6개)</h4>
+        <div className="candidate-list">
+          {candidates.map((candidate, index) => (
+            <div key={index} className="candidate-item">
+              <input
+                type="checkbox"
+                id={`candidate-${index}`}
+                checked={selectedTitleIdx === index}
+                onChange={() => setSelectedTitleIdx(selectedTitleIdx === index ? null : index)}
+              />
+              <label htmlFor={`candidate-${index}`}>
+                {candidate}
+              </label>
+            </div>
+          ))}
+        </div>
+        <button 
+          className="btn"
+          onClick={() => {
+            if (selectedTitleIdx !== null) {
+              // 선택된 제목을 적용하는 로직
+              const selectedTitle = candidates[selectedTitleIdx];
+              // 제목 적용 로직 구현
+            }
+          }}
+          disabled={selectedTitleIdx === null}
+        >
+          선택한 제목 적용
+        </button>
+      </div>
+    );
+  }
+
+  // 제목 후보가 비어있거나 "개요"만 있는 경우 처리
+  useEffect(() => {
+    if (candidates && candidates.length > 0) {
+      // "개요"만 있는 경우 필터링
+      const validCandidates = candidates.filter(c => 
+        c && c.trim() !== '개요' && !c.includes('개요')
+      );
+      
+      if (validCandidates.length === 0) {
+        console.log('유효한 제목 후보가 없음, 원문에서 제목 추출 시도');
+        // 원문에서 제목 추출 시도
+        if (raw && raw.content) {
+          const lines = raw.content.split('\n');
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed && 
+                !trimmed.startsWith('#') && 
+                !trimmed.startsWith('(') && 
+                !trimmed.startsWith('-') &&
+                !trimmed.includes('개요') && 
+                !trimmed.includes('리드') && 
+                !trimmed.includes('넛그래프') &&
+                !trimmed.includes('By ') && 
+                !trimmed.includes('년 ') && 
+                !trimmed.includes('※') &&
+                trimmed.length > 5) {
+              setCandidates([trimmed]);
+              break;
+            }
+          }
+        }
+      } else {
+        setCandidates(validCandidates);
+      }
+    }
+  }, [candidates, raw]);
+
   return (
     <div>
       <header>
@@ -340,6 +541,7 @@ export default function GenerateArticle() {
               <h1 className="headline">{enhanced.title}</h1>
               <div className="meta"><span>{enhanced.source} · {enhanced.author}</span> · <time>{enhanced.generatedAt}</time></div>
               <div className="content" dangerouslySetInnerHTML={{ __html: enhanced.contentHTML }} />
+              {formatTokenUsage(enhanced.usage)}
             </article>
           )}
 

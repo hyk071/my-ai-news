@@ -37,17 +37,26 @@ export default async function handler(req, res) {
     const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
     const gemini = genAI.getGenerativeModel({ model });
     const prompt = buildPrompt({ tags, subject, tone, lengthRange, overridePrompt });
+    
     const result = await withRetry(() => gemini.generateContent(prompt), {
       retries: 3,
       baseDelayMs: 1000,
     });
+    
     const content = result.response?.text?.() || "(응답 없음)";
-
+    
+    // Gemini는 토큰 사용량 정보를 제공하지 않으므로 기본값 반환
     return res.status(200).json({
       title: "temp",
       content,
       source: "Gemini",
-      date: new Date().toISOString()
+      date: new Date().toISOString(),
+      usage: {
+        prompt_tokens: 0,
+        completion_tokens: 0,
+        total_tokens: 0,
+        note: "Gemini API는 토큰 사용량 정보를 제공하지 않습니다"
+      }
     });
   } catch (e) {
     console.error(e);

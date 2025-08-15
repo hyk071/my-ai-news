@@ -1,7 +1,7 @@
 // === FILE: pages/api/claude.js ===
 import Anthropic from "@anthropic-ai/sdk";
 import { basePrompt } from "./prompts/articlePrompt";
-import { withRetry } from "../../utils/retry"; // 상단 import 추가
+import { withRetry } from "../../utils/retry";
 
 function buildPrompt({ tags = [], subject = "", tone = "객관적", lengthRange = {min:1000,max:2000}, overridePrompt }) {
   const keywords = tags.length ? `핵심 키워드: ${tags.join(", ")}` : "핵심 키워드: (없음)";
@@ -50,7 +50,13 @@ export default async function handler(req, res) {
       title: "temp",
       content,
       source: "Claude",
-      date: new Date().toISOString()
+      date: new Date().toISOString(),
+      usage: {
+        prompt_tokens: 0,
+        completion_tokens: 0,
+        total_tokens: 0,
+        note: "Claude API는 토큰 사용량 정보를 제공하지 않습니다"
+      }
     });
   } catch (e) {
     console.error(e);

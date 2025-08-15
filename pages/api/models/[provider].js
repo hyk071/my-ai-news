@@ -9,8 +9,21 @@ export default async function handler(req, res) {
       const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
       const list = await client.models.list();
       const ids = (list?.data || []).map(m => m.id);
-      // 챗/생성 계열로 추정되는 것만 간단 필터
-      const models = ids.filter(id => /(gpt|o\d|omni|chat|gpt-)/i.test(id));
+      
+      // GPT-5와 GPT-4 계열만 필터링 (구모델 제외)
+      const models = ids.filter(id => {
+        // GPT-5 계열 (gpt-5, gpt5 등)
+        if (id.startsWith('gpt-5') || id.startsWith('gpt5')) return true;
+        
+        // GPT-4 계열 (gpt-4o, gpt-4o-mini, gpt-4-turbo 등)
+        if (id.startsWith('gpt-4')) return true;
+        
+        // o1, o1-mini 등 최신 모델들
+        if (id.startsWith('o1')) return true;
+        
+        return false;
+      });
+      
       return res.status(200).json({ models });
     }
 

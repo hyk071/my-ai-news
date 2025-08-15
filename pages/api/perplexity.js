@@ -1,7 +1,7 @@
 // === FILE: pages/api/perplexity.js ===
 import axios from "axios";
 import { basePrompt } from "./prompts/articlePrompt";
-import { withRetry } from "../../utils/retry"; // 상단 import 추가
+import { withRetry } from "../../utils/retry";
 
 function buildPrompt({ tags = [], subject = "", tone = "객관적", lengthRange = {min:1000,max:2000}, overridePrompt }) {
   const keywords = tags.length ? `핵심 키워드: ${tags.join(", ")}` : "핵심 키워드: (없음)";
@@ -53,11 +53,20 @@ export default async function handler(req, res) {
     );
 
     const content = response.data?.choices?.[0]?.message?.content || "(응답 없음)";
+    
+    // Perplexity API 응답에서 토큰 사용량 추출
+    const usage = response.data?.usage || {};
+    
     return res.status(200).json({
       title: "temp",
       content,
       source: "Perplexity",
-      date: new Date().toISOString()
+      date: new Date().toISOString(),
+      usage: {
+        prompt_tokens: usage.prompt_tokens || 0,
+        completion_tokens: usage.completion_tokens || 0,
+        total_tokens: usage.total_tokens || 0
+      }
     });
   } catch (e) {
     console.error(e?.response?.data || e);

@@ -25,6 +25,47 @@ function uniqueSlugFromTitle(title, existing) {
   return candidate;
 }
 
+// 제목 추출 함수 완전 재작성
+function extractTitle(content) {
+  if (!content) return "제목 없음";
+  
+  const lines = content.split('\n');
+  
+  // 1단계: H1 제목 찾기 (# 제목)
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('# ') && !trimmed.startsWith('##')) {
+      const title = trimmed.replace(/^#\s+/, '').trim();
+      if (title && title.length > 5) {
+        console.log('H1 제목 발견:', title); // 디버깅용
+        return title;
+      }
+    }
+  }
+  
+  // 2단계: 첫 번째 의미있는 텍스트를 제목으로 사용
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed && 
+        !trimmed.startsWith('#') && 
+        !trimmed.startsWith('(') && 
+        !trimmed.startsWith('-') &&
+        !trimmed.includes('개요') && 
+        !trimmed.includes('리드') && 
+        !trimmed.includes('넛그래프') &&
+        !trimmed.includes('By ') && 
+        !trimmed.includes('년 ') && 
+        !trimmed.includes('※') && // 주의사항 제외
+        trimmed.length > 5) {
+      console.log('대체 제목 발견:', trimmed); // 디버깅용
+      return trimmed;
+    }
+  }
+  
+  console.log('제목을 찾을 수 없음'); // 디버깅용
+  return "제목 없음";
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end("Method Not Allowed");
   try {
