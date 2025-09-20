@@ -414,6 +414,7 @@ export default function GenerateArticle() {
           <h1>기사 생성</h1>
           <nav>
             <Link href="/">홈</Link>
+            <Link href="/search">검색</Link>
             <Link href="/admin">관리자</Link>
             <Link href="/admin/prompts">프롬프트 관리</Link>
             <Link href="/admin/metrics">CTR 대시보드</Link>

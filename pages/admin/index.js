@@ -9,6 +9,7 @@ export default function AdminHome() {
           <h1>관리자</h1>
           <nav>
             <Link href="/">메인</Link>
+            <Link href="/search">검색</Link>
           </nav>
         </div>
       </header>
@@ -30,6 +31,11 @@ export default function AdminHome() {
               <h3>CTR 대시보드</h3>
               <p>기간·검색·정렬·CSV 내보내기 지원.</p>
               <Link className="btn" href="/admin/metrics">바로 가기</Link>
+            </div>
+            <div className="card">
+              <h3>기사 검색</h3>
+              <p>고급 검색 및 필터링으로 기사를 찾아보세요.</p>
+              <Link className="btn" href="/search">바로 가기</Link>
             </div>
           </div>
         </div>
