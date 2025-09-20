@@ -11,6 +11,8 @@ import { marked } from "marked";
 import sanitizeHtml from "sanitize-html";
 import slugify from "slugify";
 import { titlePrompt } from "./prompts/titlePrompt";
+import { ContentAnalyzer } from "../../lib/content-analyzer.js";
+import { TitleGenerator } from "../../lib/title-generator.js";
 
 function getRandomAuthor() {
   const first = ["John","Emily","Michael","Sarah","David","Jessica","Daniel","Laura","Alex","Grace"];
@@ -321,70 +323,89 @@ export default async function handler(req, res){
       catch (e) { console.log(`Gemini fallback failed: ${e.message}`); }
     }
 
-    // 2) 후보 정제: 필터 통과 → 점수화 순
-    let rawCandidates = [];
+    // 2) 새로운 지능형 제목 생성 시스템 사용
+    let candidates = [];
+    let bestTitle = "AI 뉴스";
     let metaDescription = "";
-    if (seoJson?.candidates?.length) {
-      rawCandidates = seoJson.candidates;
-      metaDescription = typeof seoJson.meta_description === "string" ? seoJson.meta_description : "";
-    }
-    // 필터 적용
-    const filteredTitles = filterCandidatesByRules(rawCandidates, filters);
-    // 점수로 정렬(필터 통과 후보가 있을 때만)
-    const ordered = filteredTitles.length ? filteredTitles
-      : scoreCandidates(seoJson, tags, filters);
+    let titleGenerationLogs = null;
 
-    // 휴리스틱 백업(여전히 없으면)
-    let candidates = ordered;
-    if (!candidates.length) {
-      const firstH2 = (content.match(/^##\s*(.+)$/m)?.[1] || "").trim();
-      const firstLine = (content.replace(/[#>*`\-\*_]/g,"").split("\n").find(Boolean) || "").trim();
-      const base = firstH2 || firstLine || "AI 뉴스";
-      candidates = [base, `${base} — ${tags[0]||"분석"}`, `${base} 전망과 과제`].slice(0,3);
-    }
+    try {
+      // AI 제목 생성 시도 및 결과 처리
+      let aiTitles = [];
+      if (seoJson?.candidates?.length) {
+        // AI 생성 제목이 있는 경우 필터링 및 점수화
+        const rawCandidates = seoJson.candidates;
+        metaDescription = typeof seoJson.meta_description === "string" ? seoJson.meta_description : "";
+        
+        const filteredTitles = filterCandidatesByRules(rawCandidates, filters);
+        aiTitles = filteredTitles.length ? filteredTitles : scoreCandidates(seoJson, tags, filters);
+        
+        console.log('AI 제목 생성 성공:', aiTitles.length, '개');
+      }
 
-    // 개선된 스마트 제목 생성
-    if (!candidates.length) {
-      candidates = generateSmartTitles(content, tags, subject, tone);
-    }
-
-    function generateSmartTitles(content, tags, subject, tone) {
-      const titles = [];
+      // ContentAnalyzer로 기사 분석
+      const analyzer = new ContentAnalyzer(content, tags, subject, tone);
       
-      // 1. H2, H3 태그에서 의미있는 제목 추출
-      const headings = content.match(/^#{2,3}\s*(.+)$/gm) || [];
-      if (headings.length > 0) {
-        const cleanHeading = headings[0].replace(/^#{2,3}\s*/, "").trim();
-        if (cleanHeading.length >= 10 && cleanHeading.length <= 70) {
-          titles.push(cleanHeading);
+      // TitleGenerator로 제목 생성 (AI 제목을 우선 사용)
+      const generator = new TitleGenerator(analyzer, filters, guidelines);
+      
+      // AI 제목이 있으면 TitleGenerator에 주입
+      if (aiTitles.length > 0) {
+        generator.setAITitles(aiTitles);
+      }
+      
+      const titleResult = await generator.generateTitles();
+      
+      // AI 제목을 후보에 추가
+      if (aiTitles.length > 0) {
+        const aiCandidates = aiTitles.map(title => ({
+          title: title,
+          source: 'ai_generation',
+          score: 0.9 // AI 생성 제목에 높은 점수 부여
+        }));
+        titleResult.candidates = [...aiCandidates, ...titleResult.candidates];
+        
+        // 점수 기준으로 재정렬
+        titleResult.candidates.sort((a, b) => (b.score || 0) - (a.score || 0));
+        
+        // 최고 점수 제목을 최적 제목으로 선택
+        if (titleResult.candidates.length > 0) {
+          bestTitle = titleResult.candidates[0].title;
         }
+      } else {
+        bestTitle = titleResult.bestTitle;
       }
       
-      // 2. 첫 번째 문단에서 핵심 문장 추출
-      const firstParagraph = content.split('\n\n')[0]?.replace(/[#>*`\-\*_]/g, "").trim();
-      if (firstParagraph && firstParagraph.length > 20) {
-        const sentence = firstParagraph.split(/[.!?]/)[0].trim();
-        if (sentence.length >= 15 && sentence.length <= 60) {
-          titles.push(sentence);
-        }
-      }
+      candidates = titleResult.candidates.map(c => c.title);
+      titleGenerationLogs = titleResult.logs;
       
-      // 3. 태그와 주제를 조합한 제목 생성
-      if (tags.length > 0) {
-        const tagBased = `${tags[0]} ${subject ? subject.split(' ').slice(0, 3).join(' ') : '분석'}`;
-        if (tagBased.length <= 60) titles.push(tagBased);
-      }
+      console.log('지능형 제목 생성 완료:', {
+        bestTitle: bestTitle,
+        candidatesCount: candidates.length,
+        sources: titleResult.sources,
+        executionTime: titleResult.logs?.totalTime
+      });
       
-      // 4. 기본 제목
-      if (titles.length === 0) {
-        titles.push("AI 뉴스");
-      }
+    } catch (error) {
+      console.error('지능형 제목 생성 실패:', error.message);
       
-      return titles.slice(0, 6); // 최대 6개
+      // 기존 폴백 로직 사용
+      if (seoJson?.candidates?.length) {
+        const rawCandidates = seoJson.candidates;
+        const filteredTitles = filterCandidatesByRules(rawCandidates, filters);
+        candidates = filteredTitles.length ? filteredTitles : scoreCandidates(seoJson, tags, filters);
+        bestTitle = candidates[0] || "AI 뉴스";
+      } else {
+        // 최종 폴백: 기존 휴리스틱 방법
+        const firstH2 = (content.match(/^##\s*(.+)$/m)?.[1] || "").trim();
+        const firstLine = (content.replace(/[#>*`\-\*_]/g,"").split("\n").find(Boolean) || "").trim();
+        const base = firstH2 || firstLine || "AI 뉴스";
+        candidates = [base, `${base} — ${tags[0]||"분석"}`, `${base} 전망과 과제`].slice(0,3);
+        bestTitle = candidates[0] || "AI 뉴스";
+      }
     }
 
-    // 최종 제목 선택
-    let bestTitle = candidates[0] || "AI 뉴스";
+    // 제목 후처리
     bestTitle = bestTitle.replace(/\s*-\s*자동\s*생성\s*$/i, "").trim();
 
     // 3) 본문/작성자/시간/슬러그
@@ -402,6 +423,15 @@ export default async function handler(req, res){
       contentHTML,
       author,
       generatedAt,
+      // 디버깅 정보 추가 (개발 환경에서만)
+      ...(process.env.NODE_ENV === 'development' && titleGenerationLogs && {
+        titleGenerationLogs: {
+          executionTime: titleGenerationLogs.totalTime,
+          steps: titleGenerationLogs.steps,
+          errors: titleGenerationLogs.errors,
+          warnings: titleGenerationLogs.warnings
+        }
+      })
     });
   }catch(e){
     console.error(e);
