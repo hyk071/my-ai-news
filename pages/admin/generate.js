@@ -201,9 +201,25 @@ export default function GenerateArticle() {
           abVariants,
         }),
       });
+      
       if (!res.ok) throw new Error("저장 실패");
-      router.push('/');
-    } catch (e) { alert(e.message); }
+      
+      const result = await res.json();
+      console.log('기사 저장 성공:', result);
+      
+      // 저장 성공 후 기사 페이지로 이동
+      if (result.slug) {
+        alert('기사가 성공적으로 저장되었습니다!');
+        router.push(`/articles/${result.slug}`);
+      } else {
+        // slug가 없으면 홈으로 이동
+        alert('기사가 저장되었습니다!');
+        router.push('/');
+      }
+    } catch (e) { 
+      console.error('저장 오류:', e);
+      alert(`저장 실패: ${e.message}`); 
+    }
   }
 
   // 토큰 사용량 표시 함수 추가

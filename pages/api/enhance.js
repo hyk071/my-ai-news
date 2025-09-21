@@ -494,18 +494,27 @@ export default async function handler(req, res) {
           fallbackSteps.push(`Step ${currentStep++}: 최종 폴백 - 태그/주제 기반 제목 생성`);
 
           if (tags.length > 0) {
-            bestTitle = `${tags[0]} 관련 뉴스`;
+            bestTitle = `${tags[0]} 업계 동향: 최신 분석`;
             candidates = [bestTitle];
             fallbackSteps.push(`Step ${currentStep++}: 태그 기반 제목 - "${bestTitle}"`);
-          } else if (subject) {
-            const subjectWords = subject.split(' ').slice(0, 3).join(' ');
-            bestTitle = `${subjectWords} 분석`;
+          } else if (subject && subject.length > 10) {
+            const subjectWords = subject.split(' ').slice(0, 4).join(' ');
+            bestTitle = `${subjectWords} - 심층 분석`;
             candidates = [bestTitle];
             fallbackSteps.push(`Step ${currentStep++}: 주제 기반 제목 - "${bestTitle}"`);
           } else {
-            bestTitle = "AI 뉴스";
-            candidates = [bestTitle];
-            fallbackSteps.push(`Step ${currentStep++}: 기본 제목 사용 - "${bestTitle}"`);
+            // 콘텐츠에서 키워드 추출 시도
+            const contentKeywords = content.match(/[가-힣]{2,}/g);
+            if (contentKeywords && contentKeywords.length > 0) {
+              const topKeyword = contentKeywords[0];
+              bestTitle = `${topKeyword} 관련 최신 뉴스`;
+              candidates = [bestTitle];
+              fallbackSteps.push(`Step ${currentStep++}: 콘텐츠 키워드 기반 제목 - "${bestTitle}"`);
+            } else {
+              bestTitle = "AI 뉴스: 최신 기술 동향";
+              candidates = [bestTitle];
+              fallbackSteps.push(`Step ${currentStep++}: 기본 제목 사용 - "${bestTitle}"`);
+            }
           }
         }
       }
