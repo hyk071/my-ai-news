@@ -54,31 +54,31 @@
   - 제목 품질 검증 로직 추가
   - _Requirements: 1.1, 1.2, 1.3_
 
-- [ ] 3. 제목 품질 평가 시스템 구현
+- [x] 3. 제목 품질 평가 시스템 구현
   - 제목의 품질을 평가하고 필터링하는 TitleQualityEvaluator 클래스 구현
   - 관련성, 길이, 가독성, SEO, 참여도, 준수성 점수 계산
   - 필터 조건 통과 여부 확인 및 평가 이유 제공
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 5.1, 5.2, 5.3, 5.4_
 
-- [ ] 3.1 기본 품질 평가 구조 구현
+- [x] 3.1 기본 품질 평가 구조 구현
   - TitleQualityEvaluator 클래스의 기본 구조와 생성자 구현
   - evaluateTitle() 메인 메서드로 전체 평가 프로세스 관리
   - 점수 계산을 위한 기본 프레임워크 구현
   - _Requirements: 3.1, 3.2_
 
-- [ ] 3.2 개별 점수 계산 메서드 구현
+- [x] 3.2 개별 점수 계산 메서드 구현
   - calculateRelevanceScore() 메서드로 기사 내용과의 관련성 점수 계산
   - calculateLengthScore() 메서드로 제목 길이 적절성 점수 계산
   - calculateReadabilityScore() 메서드로 가독성 점수 계산
   - _Requirements: 3.2, 3.3_
 
-- [ ] 3.3 SEO 및 참여도 점수 계산 구현
+- [x] 3.3 SEO 및 참여도 점수 계산 구현
   - calculateSEOScore() 메서드로 SEO 최적화 점수 계산
   - calculateEngagementScore() 메서드로 클릭 유도 가능성 점수 계산
   - calculateComplianceScore() 메서드로 가이드라인 준수 점수 계산
   - _Requirements: 5.1, 5.2, 5.3, 5.4_
 
-- [ ] 3.4 필터링 및 평가 이유 제공 구현
+- [x] 3.4 필터링 및 평가 이유 제공 구현
   - passesFilters() 메서드로 필터 조건 통과 여부 확인
   - getEvaluationReasons() 메서드로 평가 결과에 대한 상세한 이유 제공
   - 중복 제거 및 품질 기준 미달 후보 필터링
