@@ -92,12 +92,20 @@ export default function Home({ articles }) {
                 />
               </div>
             </section>
-            <div className="empty-state">
-              <p>아직 생성된 기사가 없습니다.</p>
-              <Link href="/admin/generate" className="generate-link">
-                첫 번째 기사 생성하기
-              </Link>
-            </div>
+            <section className="news-section">
+              <div className="section-header">
+                <h2>최신 뉴스</h2>
+                <p>AI가 생성한 최신 뉴스를 확인해보세요</p>
+              </div>
+              <div className="empty-state">
+                <div className="empty-icon">📰</div>
+                <h3>아직 생성된 기사가 없습니다</h3>
+                <p>관리자 페이지에서 첫 번째 기사를 생성해보세요.</p>
+                <Link href="/admin/generate" className="generate-link">
+                  기사 생성하러 가기
+                </Link>
+              </div>
+            </section>
           </div>
         </main>
         <footer>© {new Date().getFullYear()} My AI News</footer>
@@ -135,48 +143,93 @@ export default function Home({ articles }) {
 
           .search-section {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 16px;
-            padding: 3rem 2rem;
-            margin-bottom: 3rem;
+            border-radius: 12px;
+            padding: 1.5rem 1.5rem;
+            margin-bottom: 2rem;
             text-align: center;
             color: white;
           }
 
           .search-container {
-            max-width: 600px;
+            max-width: 450px;
             margin: 0 auto;
           }
 
           .search-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 0 0 1rem 0;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+          }
+
+          .news-section {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e5e7eb;
+          }
+
+          .section-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #f3f4f6;
+          }
+
+          .section-header h2 {
             font-size: 2rem;
             font-weight: 700;
-            margin: 0 0 1.5rem 0;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            color: #1f2937;
+            margin: 0 0 0.5rem 0;
+          }
+
+          .section-header p {
+            color: #6b7280;
+            margin: 0;
+            font-size: 1.1rem;
           }
 
           .empty-state {
             text-align: center;
-            padding: 3rem 1rem;
+            padding: 3rem 2rem;
+            color: #6b7280;
+          }
+
+          .empty-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+          }
+
+          .empty-state h3 {
+            font-size: 1.5rem;
+            color: #374151;
+            margin: 0 0 0.5rem 0;
           }
 
           .empty-state p {
-            font-size: 1.125rem;
+            margin: 0 0 1.5rem 0;
+            font-size: 1.1rem;
             color: #6b7280;
-            margin-bottom: 1.5rem;
           }
 
           .generate-link {
+            display: inline-block;
+            padding: 0.875rem 2rem;
             background: #3b82f6;
             color: white;
-            padding: 0.75rem 1.5rem;
-            border-radius: 0.5rem;
             text-decoration: none;
-            font-weight: 500;
-            transition: background-color 0.2s ease;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
           }
 
           .generate-link:hover {
             background: #2563eb;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.4);
           }
         `}</style>
       </div>
@@ -282,27 +335,27 @@ export default function Home({ articles }) {
 
         .search-section {
           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          border-radius: 16px;
-          padding: 3rem 2rem;
-          margin-bottom: 3rem;
+          border-radius: 12px;
+          padding: 1.5rem 1.5rem;
+          margin-bottom: 2rem;
           text-align: center;
           color: white;
         }
 
         .search-container {
-          max-width: 600px;
+          max-width: 450px;
           margin: 0 auto;
         }
 
         .search-title {
-          font-size: 2rem;
-          font-weight: 700;
-          margin: 0 0 1.5rem 0;
+          font-size: 1.25rem;
+          font-weight: 600;
+          margin: 0 0 1rem 0;
           text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         .search-section :global(.home-search-bar) {
-          margin-bottom: 1.5rem;
+          margin-bottom: 1rem;
         }
 
         .popular-keywords {

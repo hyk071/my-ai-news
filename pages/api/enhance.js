@@ -14,6 +14,7 @@ import { titlePrompt } from "./prompts/titlePrompt";
 import { ContentAnalyzer } from "../../lib/content-analyzer.js";
 import { TitleGenerator } from "../../lib/title-generator.js";
 import { getAICacheWrapper } from "../../lib/ai-cache-wrapper.js";
+import { getMonitoringDashboard } from "../../lib/monitoring-dashboard.js";
 
 function getRandomAuthor() {
   const first = ["John", "Emily", "Michael", "Sarah", "David", "Jessica", "Daniel", "Laura", "Alex", "Grace"];
@@ -309,6 +310,10 @@ function extractTitleCandidates(content) {
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end("Method Not Allowed");
+  
+  // 요청 시작 시간 기록 (모니터링용)
+  req.startTime = Date.now();
+  
   const {
     content, tags = [], subject = "", tone = "객관적",
     lengthRange = { min: 1000, max: 2000 },
@@ -522,6 +527,18 @@ export default async function handler(req, res) {
     const generatedAt = formatKST(nowInKSTDate());
     const slug = uniqueSlug(bestTitle);
 
+    // 모니터링 데이터 수집
+    try {
+      const dashboard = getMonitoringDashboard();
+      const responseTime = Date.now() - (req.startTime || Date.now());
+      const qualityScore = titleResult?.candidates?.[0]?.score || 0.7; // 기본값
+      const source = titleResult?.sources?.[0] || 'fallback';
+      
+      dashboard.recordTitleGenerationRequest(true, responseTime, qualityScore, source);
+    } catch (monitoringError) {
+      console.warn('모니터링 데이터 기록 실패:', monitoringError.message);
+    }
+
     return res.status(200).json({
       title: bestTitle,
       seo: { title: bestTitle, description: metaDescription || "AI 관련 이슈를 분석한 기사." },
@@ -544,6 +561,15 @@ export default async function handler(req, res) {
   } catch (e) {
     console.error('enhance API 전체 오류:', e);
     console.error('오류 스택:', e.stack);
+
+    // 실패 모니터링 데이터 기록
+    try {
+      const dashboard = getMonitoringDashboard();
+      const responseTime = Date.now() - (req.startTime || Date.now());
+      dashboard.recordTitleGenerationRequest(false, responseTime, 0, 'error');
+    } catch (monitoringError) {
+      console.warn('모니터링 데이터 기록 실패:', monitoringError.message);
+    }
 
     // 오류 발생 시에도 기본적인 응답 제공
     try {

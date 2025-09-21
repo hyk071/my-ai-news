@@ -1,28 +1,77 @@
 {
-  "name": "my-ai-news",
-  "version": "1.0.2",
-  "private": true,
+  "name": "intelligent-title-generation",
+  "version": "1.0.0",
+  "description": "AI-powered intelligent title generation system with advanced monitoring and analytics",
   "type": "module",
+  "main": "lib/title-generator.js",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "node scripts/run-all-tests.js",
+    "test:save": "node scripts/run-all-tests.js --save-report",
+    "test:monitoring": "node lib/test-monitoring-system.js",
+    "test:integration": "node lib/test-integration-title-system.js",
+    "test:quality": "node lib/test-quality-assurance.js",
+    "monitoring": "node scripts/start-dashboard.js",
+    "monitoring:demo": "node scripts/start-dashboard.js --demo"
   },
-  "dependencies": {
-    "@anthropic-ai/sdk": "^0.59.0",
-    "@google/generative-ai": "^0.17.0",
-    "axios": "^1.7.2",
-    "marked": "^16.1.2",
-    "next": "^15.4.6",
-    "openai": "^5.12.2",
-    "react": "18.2.0",
-    "react-dom": "18.2.0",
-    "sanitize-html": "^2.17.0",
-    "slugify": "^1.6.6"
+  "keywords": [
+    "ai",
+    "title-generation",
+    "content-analysis",
+    "monitoring",
+    "analytics",
+    "dashboard",
+    "machine-learning",
+    "nlp",
+    "seo",
+    "content-optimization"
+  ],
+  "author": "Intelligent Title Generation Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0"
   },
-  "devDependencies": {
-    "eslint": "^9.36.0",
-    "eslint-config-next": "^15.5.3"
+  "dependencies": {},
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/intelligent-title-generation.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-org/intelligent-title-generation/issues"
+  },
+  "homepage": "https://github.com/your-org/intelligent-title-generation#readme",
+  "files": [
+    "lib/",
+    "docs/",
+    "scripts/",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "import": "./lib/title-generator.js"
+    },
+    "./content-analyzer": {
+      "import": "./lib/content-analyzer.js"
+    },
+    "./title-generator": {
+      "import": "./lib/title-generator.js"
+    },
+    "./title-quality-evaluator": {
+      "import": "./lib/title-quality-evaluator.js"
+    },
+    "./monitoring-dashboard": {
+      "import": "./lib/monitoring-dashboard.js"
+    },
+    "./analytics-engine": {
+      "import": "./lib/analytics-engine.js"
+    },
+    "./dashboard-server": {
+      "import": "./lib/dashboard-server.js"
+    }
   }
 }
