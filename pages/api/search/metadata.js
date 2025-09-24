@@ -9,9 +9,9 @@
  * - 전체 기사 통계
  */
 
-const { loadOrCreateSearchIndex } = require('../../../lib/search-index');
-const fs = require('fs');
-const path = require('path');
+import { loadOrCreateSearchIndex } from '../../../lib/search-index.js';
+import { promises as fs } from 'fs';
+import path from 'path';
 
 // 메타데이터 캐시
 let metadataCache = null;
@@ -28,7 +28,7 @@ async function generateDetailedMetadata() {
     
     // 원본 기사 데이터 로드
     const articlesPath = path.join(process.cwd(), 'data', 'articles.json');
-    const articlesData = await fs.promises.readFile(articlesPath, 'utf8');
+    const articlesData = await fs.readFile(articlesPath, 'utf8');
     const allArticles = JSON.parse(articlesData);
     
     // 통계 계산
@@ -158,7 +158,7 @@ async function getCachedMetadata() {
 /**
  * 메인 핸들러
  */
-async function handler(req, res) {
+export default async function handler(req, res) {
   // CORS 헤더 설정
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -212,6 +212,3 @@ async function handler(req, res) {
     });
   }
 }
-
-module.exports = handler;
-module.exports.default = handler;

@@ -52,6 +52,7 @@ export default function GenerateArticle() {
   const [raw, setRaw] = useState(null);
   const [enhanced, setEnhanced] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [autoSaveRedirect, setAutoSaveRedirect] = useState(false);
 
   // ---- 프롬프트 템플릿 목록 ----
   const [prompts, setPrompts] = useState([]);
@@ -166,6 +167,11 @@ export default function GenerateArticle() {
       setCandidates(Array.isArray(enh.candidates) ? enh.candidates : []);
       setSelectedTitleIdx(null);
       setAbSel([]);
+
+      if (autoSaveRedirect) {
+        // 자동 저장 및 본문 이동 (알림은 생략)
+        await saveArticle({ silent: true });
+      }
     } catch (e) {
       console.error(e);
       setRaw({ error: e.message || "API 호출 실패" });
@@ -173,7 +179,8 @@ export default function GenerateArticle() {
   }
 
   // 저장
-  async function saveArticle() {
+  async function saveArticle(opts = {}) {
+    const silent = !!opts.silent;
     if (!enhanced || enhanced.error) return alert("저장할 강화된 기사 데이터가 없습니다.");
     try {
       const chosenTitle =
@@ -209,11 +216,11 @@ export default function GenerateArticle() {
       
       // 저장 성공 후 기사 페이지로 이동
       if (result.slug) {
-        alert('기사가 성공적으로 저장되었습니다!');
+        if (!silent) alert('기사가 성공적으로 저장되었습니다!');
         router.push(`/articles/${result.slug}`);
       } else {
         // slug가 없으면 홈으로 이동
-        alert('기사가 저장되었습니다!');
+        if (!silent) alert('기사가 저장되었습니다!');
         router.push('/');
       }
     } catch (e) { 
@@ -540,6 +547,17 @@ export default function GenerateArticle() {
                 <input type="checkbox" checked={newsroomStyle} onChange={e => setNewsroomStyle(e.target.checked)} />
                 뉴스룸 스타일(명확한 리드/넛그래프·자연스러운 소제목)
               </label>
+            </div>
+
+            {/* 동작 설정 */}
+            <div className="stack" style={{ marginTop: 12, alignItems: 'center', gap: 8 }}>
+              <input
+                id="auto-save-redirect"
+                type="checkbox"
+                checked={autoSaveRedirect}
+                onChange={(e) => setAutoSaveRedirect(e.target.checked)}
+              />
+              <label htmlFor="auto-save-redirect">강화 후 자동 저장 및 본문 이동</label>
             </div>
 
             {/* 액션 */}

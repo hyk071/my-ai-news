@@ -361,6 +361,7 @@ export default async function handler(req, res) {
     let bestTitle = "AI 뉴스";
     let metaDescription = "";
     let titleGenerationLogs = null;
+    let titleResult = null; // 모니터링/후속 처리에서 안전하게 참조하기 위해 사전 선언
 
     // 단계별 폴백 시스템으로 개선
     const fallbackSteps = [];
@@ -403,7 +404,7 @@ export default async function handler(req, res) {
         fallbackSteps.push(`Step ${currentStep++}: AI 제목 ${aiTitles.length}개 주입 완료`);
       }
 
-      const titleResult = await generator.generateTitles();
+      titleResult = await generator.generateTitles();
       fallbackSteps.push(`Step ${currentStep++}: 제목 생성 완료 - ${titleResult.candidates.length}개 후보`);
 
       // 결과 처리
@@ -540,10 +541,15 @@ export default async function handler(req, res) {
     try {
       const dashboard = getMonitoringDashboard();
       const responseTime = Date.now() - (req.startTime || Date.now());
-      const qualityScore = titleResult?.candidates?.[0]?.score || 0.7; // 기본값
-      const source = titleResult?.sources?.[0] || 'fallback';
-      
-      dashboard.recordTitleGenerationRequest(true, responseTime, qualityScore, source);
+      const qualityScore = (titleResult && titleResult.candidates && titleResult.candidates[0]?.score) ? titleResult.candidates[0].score : 0.7;
+      const source = (titleResult && Array.isArray(titleResult.sources) && titleResult.sources[0]) ? titleResult.sources[0] : 'fallback';
+      const details = {
+        candidateCount: Array.isArray(candidates) ? candidates.length : 0,
+        bestTitleLength: (bestTitle || '').length,
+        execTime: titleGenerationLogs?.totalTime || null,
+        textProvider: textProvider || null,
+      };
+      dashboard.recordTitleGenerationRequest(true, responseTime, qualityScore, source, details);
     } catch (monitoringError) {
       console.warn('모니터링 데이터 기록 실패:', monitoringError.message);
     }
@@ -575,7 +581,11 @@ export default async function handler(req, res) {
     try {
       const dashboard = getMonitoringDashboard();
       const responseTime = Date.now() - (req.startTime || Date.now());
-      dashboard.recordTitleGenerationRequest(false, responseTime, 0, 'error');
+      const details = {
+        error: e?.message || 'unknown',
+        textProvider: textProvider || null,
+      };
+      dashboard.recordTitleGenerationRequest(false, responseTime, 0, 'error', details);
     } catch (monitoringError) {
       console.warn('모니터링 데이터 기록 실패:', monitoringError.message);
     }

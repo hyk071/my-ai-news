@@ -21,7 +21,7 @@ class TestRunner {
      * 모든 테스트 실행
      */
     async runAllTests() {
-        console.log('🧪 지능형 제목 생성 시스템 전체 테스트 시작...\n');
+        console.log('🧪 AI 뉴스 시스템 전체 테스트 시작...\n');
 
         const testFiles = await this.findTestFiles();
         
@@ -42,9 +42,12 @@ class TestRunner {
         
         // 안정적인 핵심 테스트만 포함 (타임아웃 방지)
         const stableTests = [
+            'test-search-basic.js',
+            'test-search-index.js',
+            'test-search-api.js',
             'test-system-health.js',           // 시스템 상태 확인
-            'test-title-generation-logger.js', // 로깅 테스트
-            'test-enhance-integration.js'       // 통합 테스트
+            'test-enhance-integration.js',
+            'test-title-generation-logger.js'
             // 타임아웃 발생 테스트들은 제외
             // 'test-title-quality-evaluator.js',
             // 'test-monitoring-system.js'

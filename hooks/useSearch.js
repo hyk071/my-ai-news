@@ -148,18 +148,39 @@ const useSearch = () => {
       if (pageSize !== 20) searchParams.set('pageSize', pageSize.toString());
       if (advancedSearch) searchParams.set('advanced', 'true');
       
-      const response = await fetch(`/api/search?${searchParams.toString()}`);
+      const response = await fetch(`/api/search?${searchParams.toString()}`, {
+        headers: { Accept: 'application/json' },
+      });
       
-      // 응답이 JSON인지 확인
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error(`서버에서 잘못된 응답을 받았습니다. (${response.status})`);
+      // 응답 처리 (JSON 우선, 비JSON은 세부 메시지 포함)
+      const contentType = response.headers.get('content-type') || '';
+      let data = null;
+      let rawText = null;
+      
+      if (contentType.includes('application/json')) {
+        try {
+          data = await response.json();
+        } catch (e) {
+          // JSON 파싱 실패 시 텍스트 확인
+          rawText = await response.text().catch(() => '');
+        }
+      } else {
+        // 비 JSON 응답: 텍스트를 읽어 오류 메시지에 첨부
+        rawText = await response.text().catch(() => '');
       }
       
-      const data = await response.json();
-      
       if (!response.ok) {
-        throw new Error(data.error?.message || '검색 중 오류가 발생했습니다.');
+        const serverMessage = data?.error?.message || (rawText ? rawText.slice(0, 200) : null);
+        throw new Error(serverMessage || `검색 중 오류가 발생했습니다. (HTTP ${response.status})`);
+      }
+      
+      if (!data) {
+        // 성공 상태지만 JSON이 아님 또는 비어있음: 안전한 기본값 처리
+        if (!rawText || !rawText.trim()) {
+          data = { articles: [], pagination: { totalCount: 0, totalPages: 0 } };
+        } else {
+          throw new Error(`서버 응답 형식이 올바르지 않습니다. (HTTP ${response.status})`);
+        }
       }
       
       setSearchResults(data.articles || []);
@@ -203,17 +224,30 @@ const useSearch = () => {
   // 메타데이터 로드
   const loadMetadata = useCallback(async () => {
     try {
-      const response = await fetch('/api/search/metadata');
+      const response = await fetch('/api/search/metadata', {
+        headers: { Accept: 'application/json' },
+      });
       
-      // 응답이 JSON인지 확인
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error(`메타데이터 API에서 잘못된 응답을 받았습니다. (${response.status})`);
+      const contentType = response.headers.get('content-type') || '';
+      let data = null;
+      let rawText = null;
+      
+      if (contentType.includes('application/json')) {
+        try {
+          data = await response.json();
+        } catch (e) {
+          rawText = await response.text().catch(() => '');
+        }
+      } else {
+        rawText = await response.text().catch(() => '');
       }
       
-      const data = await response.json();
+      if (!response.ok) {
+        const serverMessage = data?.error?.message || (rawText ? rawText.slice(0, 200) : null);
+        throw new Error(serverMessage || `메타데이터 로드 중 오류가 발생했습니다. (HTTP ${response.status})`);
+      }
       
-      if (response.ok) {
+      if (data) {
         setMetadata({
           availableAuthors: data.authors || [],
           availableModels: data.models || [],
